@@ -4,6 +4,7 @@ import argparse
 import re
 import random
 
+import PIL
 from PIL import Image, ImageDraw
 from networkx import Graph, DiGraph, simple_cycles
 from bidict import bidict
@@ -37,11 +38,15 @@ random.seed(args.random_seed)
 abspath = os.path.abspath(args.filename)
 basepath = os.path.basename(abspath)
 dirpath = os.path.dirname(abspath)
+
+PIL.Image.MAX_IMAGE_PIXELS = 1_000_000_000
+
+if basepath.endswith('.json') or basepath.endswith('.jpg'):
+    basepath = '_'.join(basepath.split('_')[:-1])
+
 if args.tile_save_path is None:
     args.tile_save_path = f'assets/scenes/{basepath}'
 
-if basepath.endswith('.json') or basepath.endswith('.jpg'):
-    basepath = basepath.split('_')[:-1].join('_')
 def get_paths(strings, prefix):
     pattern = re.compile(rf"^{re.escape(prefix)}_\d{{2}}\.(jpg|json)$")
     return [s for s in strings if pattern.match(s)]
@@ -133,12 +138,14 @@ def update_json(output_json, dirpath, basename, tile_path, current_floor_index, 
 
     
     new_lights = [light | {'elevation': bottom_height,
-                           "animation": {
-                                "type": "torch",
-                                "speed": 5,
-                                "intensity": 5,
-                                "reverse": False
-                            },
+                           'config': {
+                               "animation": {
+                                   "type": "torch",
+                                   "speed": 5,
+                                   "intensity": 5,
+                                   "reverse": False
+                               }
+                           },
                            'flags': {
                                'levels': {
                                    'rangeTop': top_height
@@ -192,7 +199,7 @@ def update_json(output_json, dirpath, basename, tile_path, current_floor_index, 
     img = Image.open(image_path)
     new_tile = {
         "texture": {
-            "src": os.path.join(tile_path, get_image_output_file(imagefile)),
+            "src": tile_path + '/' + get_image_output_file(imagefile),
             "anchorX": 0.5,
             "anchorY": 0.5,
             "offsetX": 0,
@@ -358,6 +365,7 @@ def get_below_or_ground(ground_floor_index, current_floor_index):
     return current_floor_index <= ground_floor_index
 
 def get_image_output_file(imagefile):
+    print(f'{imagefile=}')
     return f'{".".join(imagefile.split(".")[:-1])}.webp'
 
 
@@ -370,6 +378,8 @@ def create_image(dirpath, imagefile,  mask_polygons, is_below_or_ground):
         #for point in poly:
         #    print(point)
     out_file = get_image_output_file(imagefile)
+    print(f'{dirpath=}')
+    print(f'{out_file=}')
     out_path = os.path.join(dirpath, out_file)
     image_path = os.path.join(dirpath, imagefile)
     img = Image.open(image_path).convert("RGBA")
