@@ -22,17 +22,6 @@ parser.add_argument('-s', '--floor_height', type=int, default=10)
 parser.add_argument('--random_seed', type=int, default=42)
 parser.add_argument('--tile_save_path', type=str)
 
-"""
-to add to lights to make them torches
-
-        "animation": {
-          "type": "torch",
-          "speed": 5,
-          "intensity": 5,
-          "reverse": false
-        }
-"""
-
 args = parser.parse_args()
 random.seed(args.random_seed)
 abspath = os.path.abspath(args.filename)
@@ -109,9 +98,6 @@ def convert_map(
     print(image_filenames)
     for current_floor_index, (jsonfile, imagefile) in enumerate(
             zip(json_filenames, image_filenames)):
-        print(current_floor_index)
-        print(jsonfile)
-        print(imagefile)
 
         current_floor_polygons = create_floor_polygons(dirpath, jsonfile)
 
@@ -128,9 +114,6 @@ def convert_map(
             floor_height,
             current_floor_polygons)
 
-        # print(f'{len(current_floor_polygons)=}')
-        # for poly in current_floor_polygons:
-        #    print(poly)
         mask_polygons = previous_floor_polygons + \
             current_floor_polygons if previous_floor_polygons is not None else current_floor_polygons
         create_image(
@@ -144,12 +127,8 @@ def convert_map(
 
     with open(os.path.join(dirpath, f'{basename}_converted.json'), 'w', encoding='utf-8') as json_out:
         json.dump(output_json, json_out, indent=4)
-        # create_json(dirpath, json_filenames, ground_floor_index, floor_height)
-        # create_images(dirpath, json_filenames, ddd)
 
 # Json stuff
-
-
 def update_json(
         output_json,
         dirpath,
@@ -184,8 +163,6 @@ def update_json(
         current_json = json.load(f)
 
     current_json['walls']
-    # for wall in current_json['walls']:
-    # print(wall)
     new_walls = [
         wall | {
             'flags': {
@@ -193,12 +170,6 @@ def update_json(
                     'bottom': bottom_height,
                     'top': top_height}}} for wall in current_json['walls']]
     output_json['walls'] = new_walls if 'walls' not in output_json else output_json['walls'] + new_walls
-
-    # for wall in output_json['walls']:
-    # print(wall)
-
-    # for light in current_json['lights']:
-    # print(light)
 
     new_lights = [light | {'elevation': bottom_height,
                            'config': {
@@ -220,10 +191,6 @@ def update_json(
                            } for light in current_json['lights']]
     output_json['lights'] = new_lights if 'lights' not in output_json else output_json['lights'] + new_lights
 
-    # for light in current_json['lights']:
-    # print(light)
-    # for p in current_floor_polygons:
-    #    print(p)
     new_region = {'name': f'Inside Buildings {bottom_height} - {top_height}',
                   'color': "#" + ''.join([random.choice('0123456789abcdef') for j in range(6)]),
                   'shapes': [{'type': 'polygon',
@@ -375,11 +342,8 @@ def remove_polygons_inside(cycles):
     while index < len(cycles):
         increment = True
         for i in range(index + 1, len(cycles)):
-            # print(f'{points_cycles[i]=}')
             if all_points_inside(cycles[index], cycles[i]):
-                # print(len(cycles))
                 del cycles[index]
-                # print(len(cycles))
                 increment = False
                 break
         if increment:
@@ -396,7 +360,6 @@ def convert_edge_to_node_poly(cycle):
 
 
 def all_points_inside(test_cycle, boundary_cycle):
-    # print(f'{boundary_cycle=}')
     return all([is_inside(boundary_cycle, point[0][0], point[0][1]) and is_inside(
         boundary_cycle, point[1][0], point[1][1]) for point in test_cycle])
 
@@ -421,11 +384,8 @@ def is_on_edge(edge0, edge1, xp, yp):
 def is_inside(edges, xp, yp):
     cnt = 0
     for edge in edges:
-        # print(edge)
         if is_on_edge(edge[0], edge[1], xp, yp):
-            # print('is_on_egde')
             return True
-        # print('not_on_edge')
         (x1, y1), (x2, y2) = edge
         if (yp < y1) != (yp < y2) and xp < x1 + \
                 ((yp - y1) / (y2 - y1)) * (x2 - x1):
@@ -444,13 +404,6 @@ def get_image_output_file(imagefile):
 
 
 def create_image(dirpath, imagefile, mask_polygons, is_below_or_ground):
-    # print(len(mask_polygons))
-    # print(len(mask_polygons[0]))
-    # print(len(mask_polygons[0][0]))
-    # for poly in mask_polygons:
-    # print('===')
-    # for point in poly:
-    #    print(point)
     out_file = get_image_output_file(imagefile)
     print(f'{dirpath=}')
     print(f'{out_file=}')
@@ -465,19 +418,17 @@ def create_image(dirpath, imagefile, mask_polygons, is_below_or_ground):
     draw = ImageDraw.Draw(mask)
 
     for poly in mask_polygons:
-        # print(poly)
         draw.polygon(poly, fill=255)
 
     img.putalpha(mask)
-    # print(out_path)
     img.save(out_path)
 
-
-convert_map(
-    dirpath,
-    basepath,
-    args.tile_save_path,
-    json_filenames,
-    image_filenames,
-    args.ground_floor,
-    args.floor_height)
+if __name__ == "__main__":
+    convert_map(
+        dirpath,
+        basepath,
+        args.tile_save_path,
+        json_filenames,
+        image_filenames,
+        args.ground_floor,
+        args.floor_height)
