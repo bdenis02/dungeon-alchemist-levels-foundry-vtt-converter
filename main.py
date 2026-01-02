@@ -424,6 +424,9 @@ def get_image_and_json_filenames(basepath, dirpath):
     image_filenames = sorted([i for i in filenames if i.endswith('jpg')])
     json_filenames = sorted([i for i in filenames if i.endswith('json')])
 
+    if len(image_filenames) == 0:
+        raise Exception("No image/JSON files detected from filename")
+
     if len(image_filenames) != len(json_filenames):
         raise Exception(
             "There is a mismatch in the number of images and json files in this directory")
