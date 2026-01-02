@@ -10,46 +10,38 @@ from networkx import Graph, DiGraph, simple_cycles
 from bidict import bidict
 from math import isclose, sqrt
 
-parser = argparse.ArgumentParser(
-    prog='ProgramName',
-    description='What the program does',
-    epilog='Text at the bottom of help')
-
-
-parser.add_argument('filename')
-parser.add_argument('-f', '--ground_floor', type=int, default=0)
-parser.add_argument('-s', '--floor_height', type=int, default=10)
-parser.add_argument('--random_seed', type=int, default=42)
-parser.add_argument('--tile_save_path', type=str)
-
-args = parser.parse_args()
-random.seed(args.random_seed)
-abspath = os.path.abspath(args.filename)
-basepath = os.path.basename(abspath)
-dirpath = os.path.dirname(abspath)
-
 PIL.Image.MAX_IMAGE_PIXELS = 1_000_000_000
 
-if basepath.endswith('.json') or basepath.endswith('.jpg'):
-    basepath = '_'.join(basepath.split('_')[:-1])
 
-if args.tile_save_path is None:
-    args.tile_save_path = f'assets/scenes/{basepath}'
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        prog='Dungeon Alchemist to Levels/FoundryVTT Converter',
+        description='Converts exported files from Dungeon Alchemist format for use with FoundryVTT and the Levels module addon')
+
+    parser.add_argument('filename')
+    parser.add_argument('-f', '--ground_floor', type=int, default=0)
+    parser.add_argument('-s', '--floor_height', type=int, default=10)
+    parser.add_argument('--random_seed', type=int, default=42)
+    parser.add_argument('--tile_save_path', type=str)
+    args = parser.parse_args()
+    if args.tile_save_path is None:
+        args.tile_save_path = f'assets/scenes/{basepath}'
+
+    return args
+
+
+def get_basepath_and_dirpath_from_filename(filename):
+    abspath = os.path.abspath(filename)
+    basepath = os.path.basename(abspath)
+    dirpath = os.path.dirname(abspath)
+    if basepath.endswith('.json') or basepath.endswith('.jpg'):
+        basepath = '_'.join(basepath.split('_')[:-1])
+    return basepath, dirpath
 
 
 def get_paths(strings, prefix):
     pattern = re.compile(rf"^{re.escape(prefix)}_\d{{2}}\.(jpg|json)$")
     return [s for s in strings if pattern.match(s)]
-
-
-filenames = get_paths(os.listdir(dirpath), basepath)
-image_filenames = sorted([i for i in filenames if i.endswith('jpg')])
-json_filenames = sorted([i for i in filenames if i.endswith('json')])
-assert len(image_filenames) == len(json_filenames)
-assert all([i[-6:-4] == j[-7:-5]
-           for i, j in zip(image_filenames, json_filenames)])
-
-args.number_of_levels = len(image_filenames)
 
 
 ENVIRONMENT = {
@@ -129,6 +121,8 @@ def convert_map(
         json.dump(output_json, json_out, indent=4)
 
 # Json stuff
+
+
 def update_json(
         output_json,
         dirpath,
@@ -423,12 +417,37 @@ def create_image(dirpath, imagefile, mask_polygons, is_below_or_ground):
     img.putalpha(mask)
     img.save(out_path)
 
-if __name__ == "__main__":
+
+def get_image_and_json_filenames(basepath, dirpath):
+
+    filenames = get_paths(os.listdir(dirpath), basepath)
+    image_filenames = sorted([i for i in filenames if i.endswith('jpg')])
+    json_filenames = sorted([i for i in filenames if i.endswith('json')])
+
+    if len(image_filenames) != len(json_filenames):
+        raise Exception(
+            "There is a mismatch in the number of images and json files in this directory")
+
+    if not all([i[-6:-4] == j[-7:-5]
+                for i, j in zip(image_filenames, json_filenames)]):
+        raise Exception("There is a mismatch in image and json filenames in the directory.")
+    return image_filenames, json_filenames
+
+
+def check_and_convert(filename, tile_save_path, ground_floor, floor_height):
+    basepath, dirpath = get_basepath_and_dirpath_from_filename(filename)
+    image_filenames, json_filenames = get_image_and_json_filenames(basepath, dirpath)
     convert_map(
         dirpath,
         basepath,
-        args.tile_save_path,
+        tile_save_path,
         json_filenames,
         image_filenames,
-        args.ground_floor,
-        args.floor_height)
+        ground_floor,
+        floor_height)
+
+
+if __name__ == "__main__":
+    args = parse_arguments()
+    random.seed(args.random_seed)
+    check_and_convert(args.filename, args.tile_save_path, args.ground_floor, args.floor_height)
