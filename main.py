@@ -23,6 +23,7 @@ def parse_arguments():
     parser.add_argument('-s', '--floor_height', type=int, default=10)
     parser.add_argument('--random_seed', type=int, default=42)
     parser.add_argument('--tile_save_path', type=str)
+    parser.add_argument('--underground_alpha', action='store_true', help='Set this to make non-room areas underground transparent.')
     args = parser.parse_args()
     if args.tile_save_path is None:
         args.tile_save_path = f'assets/scenes/{basepath}'
@@ -82,7 +83,8 @@ def convert_map(
         json_filenames,
         image_filenames,
         ground_floor_index,
-        floor_height):
+        floor_height,
+        underground_alpha):
     output_json = None
     previous_floor_polygons = None
     total_floors = len(json_filenames)
@@ -108,13 +110,16 @@ def convert_map(
 
         mask_polygons = previous_floor_polygons + \
             current_floor_polygons if previous_floor_polygons is not None else current_floor_polygons
+
+        is_below_or_ground_status = (ground_floor_index == current_floor_index or current_floor_index == 0) if underground_alpha else get_below_or_ground(
+                ground_floor_index,
+                current_floor_index)
         create_image(
             dirpath,
             imagefile,
             mask_polygons,
-            get_below_or_ground(
-                ground_floor_index,
-                current_floor_index))
+            is_below_or_ground_status
+            )
         previous_floor_polygons = current_floor_polygons
 
     with open(os.path.join(dirpath, f'{basename}_converted.json'), 'w', encoding='utf-8') as json_out:
@@ -437,7 +442,7 @@ def get_image_and_json_filenames(basepath, dirpath):
     return image_filenames, json_filenames
 
 
-def check_and_convert(filename, tile_save_path, ground_floor, floor_height):
+def check_and_convert(filename, tile_save_path, ground_floor, floor_height, underground_alpha=False):
     basepath, dirpath = get_basepath_and_dirpath_from_filename(filename)
     image_filenames, json_filenames = get_image_and_json_filenames(basepath, dirpath)
     convert_map(
@@ -447,10 +452,11 @@ def check_and_convert(filename, tile_save_path, ground_floor, floor_height):
         json_filenames,
         image_filenames,
         ground_floor,
-        floor_height)
+        floor_height,
+        underground_alpha)
 
 
 if __name__ == "__main__":
     args = parse_arguments()
     random.seed(args.random_seed)
-    check_and_convert(args.filename, args.tile_save_path, args.ground_floor, args.floor_height)
+    check_and_convert(args.filename, args.tile_save_path, args.ground_floor, args.floor_height, args.underground_alpha)

@@ -40,7 +40,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         # Organization and Application names are used to create the config file path
         self.settings = QSettings("Mogusha", "Dungeon Alchemist Levels FoundryVTT Converter")
-        self.setWindowTitle("PySide6 Persistent App")
+        self.setWindowTitle("Dungeon Alchemist Levels FoundryVTT Converter")
         self.resize(600, 500)
 
         # UI Construction
@@ -86,6 +86,13 @@ class MainWindow(QMainWindow):
         floor_height_spin_layout.addWidget(self.floor_height_selector)
         main_layout.addLayout(floor_height_spin_layout)
 
+        # Underground alpha
+        self.underground_alpha_selector = QCheckBox()
+        underground_alpha_spin_layout = QHBoxLayout()
+        underground_alpha_spin_layout.addWidget(QLabel("Underground Alpha:"))
+        underground_alpha_spin_layout.addWidget(self.underground_alpha_selector)
+        main_layout.addLayout(underground_alpha_spin_layout)
+
         # Seed
         self.seed_selector = QSpinBox()
         self.seed_selector.setSingleStep(1)
@@ -123,6 +130,9 @@ class MainWindow(QMainWindow):
         val = int(self.settings.value("floor_height", 10))
         self.floor_height_selector.setValue(val)
 
+        val = bool(self.settings.value("underground_alpha", True))
+        self.underground_alpha_selector.setChecked(val)
+        
         val = int(self.settings.value("seed", 42))
         self.seed_selector.setValue(val)
 
@@ -134,6 +144,7 @@ class MainWindow(QMainWindow):
         self.settings.setValue("ground_floor", self.ground_floor_selector.value())
         self.settings.setValue("floor_height", self.floor_height_selector.value())
         self.settings.setValue("seed", self.seed_selector.value())
+        self.settings.setValue('underground_alpha', self.underground_alpha_selector.isChecked())
         print(f"Settings saved to {QSettings.fileName(self.settings)}")
 
     def closeEvent(self, event):
@@ -155,7 +166,8 @@ class MainWindow(QMainWindow):
             filepath,
             tile_save_path,
             self.ground_floor_selector.value(),
-            self.floor_height_selector.value())
+            self.floor_height_selector.value(),
+            self.underground_alpha_selector.isChecked())
 
 
 if __name__ == "__main__":
